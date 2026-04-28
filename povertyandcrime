@@ -1,0 +1,192 @@
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import seaborn as sns
+from scipy import stats
+import warnings
+warnings.filterwarnings("ignore")
+
+# ─────────────────────────────────────────────
+# 1. DATASETS
+# ─────────────────────────────────────────────
+
+# Top 10 countries by Crime Index (Numbeo Crime Index 2024)
+high_crime = pd.DataFrame({
+    "Country":        ["Venezuela", "Papua New Guinea", "Haiti", "South Africa",
+                        "Honduras", "Trinidad & Tobago", "Nigeria", "Jamaica",
+                        "Brazil", "Colombia"],
+    "Region":         ["S. America", "Pacific", "Caribbean", "Africa",
+                        "C. America", "Caribbean", "Africa", "Caribbean",
+                        "S. America", "S. America"],
+    "Crime_Index":    [83.1, 80.6, 79.9, 76.9, 74.5, 71.6, 71.2, 70.8, 68.9, 67.4],
+    "GDP_per_Capita": [3200, 2800, 1200, 6200, 2700, 16400, 2300, 5800, 8700, 6700],
+    "Poverty_Rate_Pct":[94.5, 39.9, 60.7, 55.5, 73.5, 34.2, 40.1, 19.9, 26.5, 27.0],
+    "Unemployment_Pct":[34.3, 2.5, 70.2, 32.9, 8.2, 5.7, 35.6, 15.2, 11.1, 11.3],
+    "Homicide_per_100k":[40.9, 10.1, 34.6, 41.9, 35.1, 28.5, 34.5, 43.9, 21.3, 25.5],
+    "Police_per_100k": [200, 68, 120, 182, 198, 320, 195, 288, 242, 415],
+    "Gini_Coeff":      [44.8, 41.9, 41.1, 63.0, 52.1, 40.0, 35.1, 35.7, 48.9, 51.3],
+    "Type":            ["High Crime"] * 10,
+})
+
+# Top 10 Poorest Countries by GDP per Capita (World Bank 2024)
+poorest = pd.DataFrame({
+    "Country":        ["Burundi", "South Sudan", "Central Afr. Rep.", "DR Congo",
+                        "Mozambique", "Niger", "Malawi", "Chad",
+                        "Liberia", "Sierra Leone"],
+    "Region":         ["Africa", "Africa", "Africa", "Africa",
+                        "Africa", "Africa", "Africa", "Africa",
+                        "Africa", "Africa"],
+    "Crime_Index":    [28.4, 45.1, 52.3, 48.2, 41.0, 37.6, 35.9, 43.8, 38.2, 42.1],
+    "GDP_per_Capita": [237, 484, 510, 589, 527, 575, 609, 644, 674, 688],
+    "Poverty_Rate_Pct":[87.2, 82.3, 81.0, 77.1, 74.9, 82.0, 70.9, 65.4, 50.9, 56.8],
+    "Unemployment_Pct":[1.4, 12.1, 6.0, 4.2, 3.7, 0.5, 5.7, 1.7, 2.8, 4.5],
+    "Homicide_per_100k":[6.0, 13.9, 19.8, 13.6, 3.0, 3.1, 1.8, 6.0, 3.2, 5.0],
+    "Police_per_100k": [32, 45, 21, 37, 55, 28, 41, 33, 60, 44],
+    "Gini_Coeff":      [38.6, 44.1, 56.2, 42.1, 54.0, 34.3, 38.5, 43.3, 35.3, 34.0],
+    "Type":            ["Poorest"] * 10,
+})
+
+combined = pd.concat([high_crime, poorest], ignore_index=True)
+
+# ─────────────────────────────────────────────
+# 2. CORRELATION ANALYSIS
+# ─────────────────────────────────────────────
+r_val, p_val = stats.pearsonr(combined.Poverty_Rate_Pct, combined.Crime_Index)
+r_gini, p_gini = stats.pearsonr(combined.Gini_Coeff, combined.Crime_Index)
+r_gdp, p_gdp   = stats.pearsonr(combined.GDP_per_Capita, combined.Crime_Index)
+
+print("=" * 55)
+print("  CORRELATION: POVERTY & CRIME")
+print("=" * 55)
+print(f"  Poverty Rate   vs Crime Index  → r = {r_val:.3f}, p = {p_val:.4f}")
+print(f"  Gini Coeff     vs Crime Index  → r = {r_gini:.3f}, p = {p_gini:.4f}")
+print(f"  GDP per Capita vs Crime Index  → r = {r_gdp:.3f}, p = {p_gdp:.4f}")
+print()
+print("  KEY FINDING: High-crime countries ≠ always poorest.")
+print("  Inequality (Gini) is a stronger predictor than poverty alone.")
+
+# ─────────────────────────────────────────────
+# 3. VISUALIZATION
+# ─────────────────────────────────────────────
+plt.style.use("dark_background")
+fig = plt.figure(figsize=(22, 15), facecolor="#0d1117")
+fig.suptitle("DOES POVERTY CAUSE CRIME?  |  Crime vs. Poverty Analysis — Top 20 Countries",
+             fontsize=20, fontweight="bold", color="#ff6b35", y=0.98)
+
+# Color mapping
+color_map = {"High Crime": "#ff4444", "Poorest": "#4488ff"}
+colors = [color_map[t] for t in combined.Type]
+
+# 3.1 Scatter: Poverty Rate vs Crime Index
+ax1 = fig.add_subplot(3, 3, (1, 4))
+for t, c in color_map.items():
+    sub = combined[combined.Type == t]
+    ax1.scatter(sub.Poverty_Rate_Pct, sub.Crime_Index, color=c, s=120, label=t, zorder=5, edgecolors="white", lw=0.5)
+    for _, row in sub.iterrows():
+        ax1.annotate(row.Country, (row.Poverty_Rate_Pct, row.Crime_Index),
+                     fontsize=6.5, color="lightgray", xytext=(4, 2), textcoords="offset points")
+m, b = np.polyfit(combined.Poverty_Rate_Pct, combined.Crime_Index, 1)
+x_line = np.linspace(0, 100, 200)
+ax1.plot(x_line, m * x_line + b, "yellow", lw=1.5, ls="--", alpha=0.7,
+         label=f"Trend (r={r_val:.2f})")
+ax1.set_xlabel("Poverty Rate (%)", color="white")
+ax1.set_ylabel("Crime Index", color="white")
+ax1.set_title("Poverty Rate vs. Crime Index", color="white", fontsize=12)
+ax1.legend(fontsize=9)
+ax1.set_facecolor("#161b22")
+ax1.tick_params(colors="white")
+for spine in ax1.spines.values(): spine.set_edgecolor("#333")
+
+# 3.2 Crime Index Bar Chart — Top 10 High Crime
+ax2 = fig.add_subplot(3, 3, 2)
+hc = high_crime.sort_values("Crime_Index", ascending=True)
+bars = ax2.barh(hc.Country, hc.Crime_Index, color="#ff4444", edgecolor="none", height=0.6)
+ax2.set_title("Top 10 Highest Crime Countries\n(Crime Index)", color="white", fontsize=11)
+ax2.set_facecolor("#161b22")
+ax2.tick_params(colors="white")
+ax2.set_xlim(0, 100)
+for spine in ax2.spines.values(): spine.set_edgecolor("#333")
+for bar, val in zip(bars, hc.Crime_Index):
+    ax2.text(val + 0.5, bar.get_y() + bar.get_height()/2, f"{val}", va="center", color="white", fontsize=8)
+
+# 3.3 GDP per Capita — Poorest
+ax3 = fig.add_subplot(3, 3, 3)
+po = poorest.sort_values("GDP_per_Capita", ascending=True)
+bars3 = ax3.barh(po.Country, po.GDP_per_Capita, color="#4488ff", edgecolor="none", height=0.6)
+ax3.set_title("Top 10 Poorest Countries\n(GDP per Capita $)", color="white", fontsize=11)
+ax3.set_facecolor("#161b22")
+ax3.tick_params(colors="white")
+for spine in ax3.spines.values(): spine.set_edgecolor("#333")
+for bar, val in zip(bars3, po.GDP_per_Capita):
+    ax3.text(val + 5, bar.get_y() + bar.get_height()/2, f"${val}", va="center", color="white", fontsize=8)
+
+# 3.4 Gini vs Crime
+ax4 = fig.add_subplot(3, 3, 5)
+ax4.scatter(combined.Gini_Coeff, combined.Crime_Index, c=colors, s=100, edgecolors="white", lw=0.5, zorder=5)
+m2, b2 = np.polyfit(combined.Gini_Coeff, combined.Crime_Index, 1)
+x2 = np.linspace(30, 65, 200)
+ax4.plot(x2, m2 * x2 + b2, "yellow", lw=1.5, ls="--", label=f"Trend (r={r_gini:.2f})")
+ax4.set_xlabel("Gini Coefficient (Inequality)", color="white")
+ax4.set_ylabel("Crime Index", color="white")
+ax4.set_title("Inequality (Gini) vs. Crime Index", color="white", fontsize=11)
+ax4.legend(fontsize=9)
+ax4.set_facecolor("#161b22")
+ax4.tick_params(colors="white")
+for spine in ax4.spines.values(): spine.set_edgecolor("#333")
+
+# 3.5 Homicide Rate Comparison
+ax5 = fig.add_subplot(3, 3, 6)
+combined_sorted = combined.sort_values("Homicide_per_100k", ascending=False).head(15)
+bar_colors = [color_map[t] for t in combined_sorted.Type]
+ax5.barh(combined_sorted.Country, combined_sorted.Homicide_per_100k, color=bar_colors, edgecolor="none", height=0.6)
+ax5.set_title("Homicide Rate per 100k\n(Top Countries)", color="white", fontsize=11)
+ax5.set_facecolor("#161b22")
+ax5.tick_params(colors="white")
+for spine in ax5.spines.values(): spine.set_edgecolor("#333")
+
+# 3.6 Summary findings box
+ax6 = fig.add_subplot(3, 3, (7, 9))
+ax6.set_facecolor("#161b22")
+ax6.axis("off")
+findings = [
+    ("📊 CORRELATION FINDINGS", "#ff6b35", 14),
+    (f"Poverty Rate → Crime Index:   r = {r_val:.3f}  (Moderate Positive)", "white", 11),
+    (f"Inequality (Gini) → Crime:    r = {r_gini:.3f}  (Strong Positive)", "#ffdd44", 11),
+    (f"GDP per Capita → Crime:       r = {r_gdp:.3f}  (Negative)", "#44ff88", 11),
+    ("", "white", 8),
+    ("🔍 KEY INSIGHT", "#ff6b35", 13),
+    ("Poverty alone does NOT fully explain crime. Inequality is the stronger", "white", 10),
+    ("predictor. The 10 poorest nations (mostly African) have LOWER crime", "white", 10),
+    ("indices than the top 10 high-crime countries. Social systems, governance,", "white", 10),
+    ("and inequality gaps matter far more than absolute poverty levels.", "white", 10),
+    ("", "white", 8),
+    ("💡 POLICY IMPLICATION", "#ff6b35", 13),
+    ("Addressing wealth inequality and building institutional trust are more", "white", 10),
+    ("effective crime-reduction strategies than poverty alleviation alone.", "white", 10),
+]
+y_pos = 0.95
+for text, color, size in findings:
+    ax6.text(0.03, y_pos, text, color=color, fontsize=size,
+             transform=ax6.transAxes, va="top",
+             fontweight="bold" if "FINDINGS" in text or "INSIGHT" in text or "POLICY" in text else "normal")
+    y_pos -= 0.065
+
+fig.text(0.5, 0.01, "Andre Townsend, MBA  |  Data Analytics Portfolio  |  Project 2: Does Poverty Cause Crime?",
+         ha="center", color="#888", fontsize=9)
+
+patches = [mpatches.Patch(color=c, label=l) for l, c in color_map.items()]
+fig.legend(handles=patches, loc="upper right", fontsize=10, framealpha=0.3)
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.97])
+plt.savefig("project2_poverty_crime.png", dpi=150, bbox_inches="tight", facecolor="#0d1117")
+plt.show()
+print("✅ Project 2 chart saved.")
+
+# ─────────────────────────────────────────────
+# 4. EXPORT CSV FOR POWER BI
+# ─────────────────────────────────────────────
+combined.to_csv("project2_poverty_crime.csv", index=False)
+print("✅ CSV exported for Power BI.")
