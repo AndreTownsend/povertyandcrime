@@ -42,7 +42,7 @@ Crime is often attributed to poverty, but this assumption may oversimplify a com
 
 ## Key Visualizations
 
-![Poverty vs Crime Analysis](project2_poverty_crime.png)
+![Poverty vs Crime Analysis](PovertyV.png)
 
 ### Charts Included:
 - Poverty Rate vs Crime Index (Scatter + Trend Line)  
